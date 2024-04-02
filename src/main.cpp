@@ -46,9 +46,10 @@ void setup() {
 }
 
 void loop() {
+    delay(10000);
+
     if (WiFiClass::status() != WL_CONNECTED) {
         Serial.println("WiFi not connected");
         return;
     }
-    delay(10000);
 }

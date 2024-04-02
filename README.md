@@ -18,7 +18,7 @@ This application is designed to stream video from an ESP32 camera module to a we
 
 1. Clone this repository to your local machine.
 2. Open the project in your IDE.
-3. Modify the `ssid` and `password` variables in `WiFiConfig.cpp` with your Wi-Fi network credentials.
+3. Each time the ESP32 is powered on, it starts an access point named "AutoConnectAP" and goes into a blocking loop awaiting configuration. The access point is password protected with the password "12345678". You can connect to this access point and configure the Wi-Fi credentials.
 5. Compile and upload the sketch to your ESP32 board.
 
 ## Usage
@@ -30,7 +30,7 @@ Once the sketch is uploaded and the ESP32 board is powered on, it will connect t
 The application is implemented in C++ and uses the ESP32 Camera library to capture video frames from the ESP32 camera module. The video frames are then streamed over HTTP using the ESP HTTP Server library. The application is designed using a class-based approach, with the main components of the application encapsulated in classes:
 
 - **Camera Initialization:** The camera is initialized with the `esp_camera_init()` function, which is called in the `setup()` function in `main.cpp`. The camera configuration is set in the `camera_config_t` struct.
-- **Wi-Fi Connection:** The ESP32 connects to a Wi-Fi network using the credentials provided in the `ssid` and `password` variables in `main.cpp`.
+- **Wi-Fi Connection:** Each time the ESP32 is powered on, it creates an access point named "AutoConnectAP". You can connect to this access point and configure the Wi-Fi credentials. This is handled by the `WiFiManager` library.
 - **HTTP Server:** The HTTP server is started in the `startCameraServer()` function in `app_httpd.cpp`. The server listens on two ports, one for the web server and one for the stream server.
 - **Stream Handler:** The `VideoStreamHandler` class in `VideoStreamHandler.cpp` handles HTTP GET requests to the `/stream` path. It captures a frame from the camera, converts it to JPEG format if necessary, and sends it as a chunk of the HTTP response. The handler also calculates the average frame time for the video stream.
 - **Running Average Filter:** A running average filter is implemented in `VideoStreamHandler.cpp` to calculate the average frame time for the video stream. The filter is used in the `handle()` function.

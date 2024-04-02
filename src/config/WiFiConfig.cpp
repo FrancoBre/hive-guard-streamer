@@ -1,23 +1,11 @@
 #include "WiFiConfig.h"
-#include "WiFi.h"
-
-const char* ssid = "your_SSID";
-const char* password = "your_PASSWORD";
+#include <WiFiManager.h>
 
 bool WiFiConfig::connect() {
-    WiFi.begin(ssid, password);
+    WiFiClass::mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
+    WiFiManager wm;
 
-    while (WiFiClass::status() != WL_CONNECTED) {
-        delay(1000);
-        Serial.println("Connecting to WiFi...");
-    }
-
-    if (WiFiClass::status() == WL_CONNECTED) {
-        Serial.println("Connected to WiFi");
-        Serial.print("IP address: ");
-        Serial.println(WiFi.localIP());
-        return true;
-    } else {
-        return false;
-    }
+    wm.resetSettings();
+    wm.setConnectTimeout(60);
+    return wm.autoConnect("AutoConnectAP","12345678");
 }
