@@ -2,6 +2,7 @@
 #define WIFICONFIG_H
 
 #include "WiFi.h"
+#include "utils/CustomSerial.h"
 
 class WiFiConfig {
 public:

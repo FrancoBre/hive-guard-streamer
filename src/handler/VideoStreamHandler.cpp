@@ -1,5 +1,6 @@
 #include "VideoStreamHandler.h"
 #include "esp_camera.h"
+#include "config/WiFiConfig.h"
 #include <Arduino.h>
 
 #define PART_BOUNDARY "123456789000000000000987654321"
@@ -75,7 +76,7 @@ enable_led(true);
             _jpg_buf = nullptr;
         }
         if (res != ESP_OK) {
-            log_e("Send frame failed");
+            Logger.print(__FILE__, __LINE__, "Send frame failed");
             break;
         }
         int64_t fr_end = esp_timer_get_time();
