@@ -3,6 +3,7 @@
 #include "esp_camera.h"
 #include "esp_timer.h"
 #include "Arduino.h"
+#include "utils/CustomSerial.h"
 
 bool CameraConfig::setup() {
     camera_config_t config;
@@ -37,10 +38,9 @@ bool CameraConfig::setup() {
         config.fb_count = 1;
     }
 
-    // Camera init
     esp_err_t err = esp_camera_init(&config);
     if (err != ESP_OK) {
-        Serial.printf("Camera init failed with error 0x%x", err);
+        Logger.print(__FILE__, __LINE__, "Camera init failed with error 0x%x", err);
         return false;
     }
 
