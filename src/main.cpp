@@ -8,6 +8,7 @@
 #include "config/HttpServerConfig.h"
 #include "handler/Endpoint.h"
 #include "handler/LogsHandler.h"
+#include "handler/DHTHandler.h"
 #include "utils/CustomSerial.h"
 
 void setup() {
@@ -45,10 +46,15 @@ void setup() {
     Logger.print(__FILE__, __LINE__, "Logs endpoint created! Go to http://", WiFi.localIP().toString().c_str(),
                  "/logs\n");
 
+    auto *dhtEndpoint = new Endpoint("/sensor", HTTP_GET, DHTHandler::handle);
+    Logger.print(__FILE__, __LINE__, "DHT endpoint created! Go to http://", WiFi.localIP().toString().c_str(),
+                 "/sensor\n");
+
     HttpServerConfig httpServerConfig;
     httpServerConfig.addEndpoint(statusEndpoint);
     httpServerConfig.addEndpoint(videoStreamEndpoint);
-    httpServerConfig.addEndpoint(logsEndpoint);
+    httpServerConfig.addEndpoint(logsEndpoint); 
+    httpServerConfig.addEndpoint(dhtEndpoint);
 
     if (!httpServerConfig.start()) {
         Logger.print(__FILE__, __LINE__, "HTTP server failed to start");
@@ -56,6 +62,7 @@ void setup() {
     } else {
         Logger.print(__FILE__, __LINE__, "HTTP server started");
     }
+
 }
 
 void loop() {
