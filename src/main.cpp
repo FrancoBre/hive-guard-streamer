@@ -8,7 +8,7 @@
 #include "config/HttpServerConfig.h"
 #include "handler/Endpoint.h"
 #include "handler/LogsHandler.h"
-#include "handler/DHTHandler.h"
+#include "handler/TemperatureHumiditySensorHandler.h"
 #include "utils/CustomSerial.h"
 
 void setup() {
@@ -46,7 +46,7 @@ void setup() {
     Logger.print(__FILE__, __LINE__, "Logs endpoint created! Go to http://", WiFi.localIP().toString().c_str(),
                  "/logs\n");
 
-    auto *dhtEndpoint = new Endpoint("/sensor", HTTP_GET, DHTHandler::handle);
+    auto *dhtEndpoint = new Endpoint("/sensor", HTTP_GET, TemperatureHumiditySensorHandler::handle);
     Logger.print(__FILE__, __LINE__, "DHT endpoint created! Go to http://", WiFi.localIP().toString().c_str(),
                  "/sensor\n");
 
