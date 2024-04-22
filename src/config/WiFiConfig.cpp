@@ -1,35 +1,41 @@
 #include "WiFiConfig.h"
-#include "WiFi.h"
 
-const char *ssid = "Speedy-Fibra-C19";
-const char *password = "qazwsxed";
+Preferences WiFiConfig::preferences;
 
 bool WiFiConfig::connect() {
-    WiFi.begin(ssid, password);
+    WiFiClass::mode(WIFI_STA); // explicitly set mode, esp defaults to STA+AP
+    WiFiManager wm;
 
-    while (WiFiClass::status() != WL_CONNECTED) {
-        delay(1000);
-        Logger.print(__FILE__, __LINE__, "Connecting to WiFi...\n");
+    wm.resetSettings();
+    wm.setConnectTimeout(60);
+    bool res = wm.autoConnect("AutoConnectAP","12345678");
+
+    if (res) {
+        preferences.begin("wifi", false);
+        preferences.putString("ssid", WiFi.SSID());
+        preferences.putString("password", WiFi.psk());
+        preferences.end();
     }
 
-    if (WiFiClass::status() == WL_CONNECTED) {
-        Logger.print(__FILE__, __LINE__, "Connected to WiFi! IP address: ", WiFi.localIP().toString().c_str());
-        return true;
-    } else {
-        return false;
-    }
+    return res;
 }
 
 void WiFiConfig::disconnect() {
-//    WiFi.disconnect();
     WiFiClass::mode(WIFI_OFF);
 }
 
 void WiFiConfig::reconnect() {
-    WiFi.begin(ssid, password);
+    preferences.begin("wifi", true);
+    String ssid = preferences.getString("ssid", "");
+    String password = preferences.getString("password", "");
+    preferences.end();
 
-    while (WiFiClass::status() != WL_CONNECTED) {
-        delay(1000);
-        return;
+    if (ssid != "" && password != "") {
+        WiFi.begin(ssid.c_str(), password.c_str());
+
+        while (WiFiClass::status() != WL_CONNECTED) {
+            delay(1000);
+            return;
+        }
     }
 }

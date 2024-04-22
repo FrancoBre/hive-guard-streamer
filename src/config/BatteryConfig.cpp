@@ -23,27 +23,15 @@ void BatteryConfig::checkBatteryLevel() {
 
     // Convert the raw value to voltage
     float batteryVoltage = (float) rawValue / 4095.0 * 3.3 * 2 * 1.05;
-//    float battv = (float) rawValue / 4095.0 * 3.3;
 
     Logger.print(__FILE__, __LINE__, "Voltage on GPIO 13: ", batteryVoltage, " V");
 
     // Calculate the battery percentage
-//    uint8_t batteryPercentage = (uint8_t) (((batteryVoltage - BATTV_MIN) / (BATTV_MAX - BATTV_MIN)) * 100);
+    auto batteryPercentage = (uint8_t) (((batteryVoltage - BATTV_MIN) / (BATTV_MAX - BATTV_MIN)) * 100);
 
-//    float tempBattpc = ((battv - BATTV_MIN) / (BATTV_MAX - BATTV_MIN)) * 100;
-//    uint8_t battpc = tempBattpc > 100 ? 100 : (uint8_t) tempBattpc;
-
-    // Calculate the battery percentage
-    uint8_t batteryPercentage = (uint8_t) (((batteryVoltage - BATTV_MIN) / (BATTV_MAX - BATTV_MIN)) * 100);
-
-    // Create a string with the battery level information
     char batteryLevelStr[50];
     sprintf(batteryLevelStr, "Battery level: %d%%", batteryPercentage);
-
-    // Pass the string to the Logger.print function
     Logger.print(__FILE__, __LINE__, batteryLevelStr);
-
-//    Logger.print(__FILE__, __LINE__, "Battery level: ", batteryPercentage, "%");
 
     // Check if the battery voltage is low
     if (batteryVoltage < BATTV_LOW) {
