@@ -10,6 +10,24 @@
 #include "handler/LogsHandler.h"
 #include "handler/TemperatureHumiditySensorHandler.h"
 #include "utils/CustomSerial.h"
+#include "config/BatteryConfig.h"
+#include <driver/adc.h>
+
+void readGPIO13() {
+    float ADbits = 4095.0f;
+    float uPvolts = 3.3f;
+    float adcValue = 0.0f;
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xFrequency = 100; //delay for mS
+    for (;;) {
+        adcValue = float(adc1_get_raw(ADC1_CHANNEL_4)); //take a raw ADC reading from GPIO 13
+        adcValue = (adcValue * uPvolts) / ADbits; //calculate voltage
+        Logger.print(__FILE__, __LINE__, "Voltage on GPIO 13: %.2f V", adcValue);
+        xLastWakeTime = xTaskGetTickCount();
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+    }
+    vTaskDelete(NULL);
+} // end readGPIO13()
 
 void setup() {
     delay(5000);
@@ -25,6 +43,9 @@ void setup() {
         Logger.print(__FILE__, __LINE__, "Camera setup successful");
     }
 
+    pinMode(13, INPUT);
+    Logger.print(__FILE__, __LINE__, "GPIO 13 set as input");
+
     if (!WiFiConfig::connect()) {
         Logger.print(__FILE__, __LINE__, "WiFi connection failed");
         return;
@@ -33,6 +54,9 @@ void setup() {
     }
 
     TimeConfig::initialize();
+
+//    BatteryConfig::initialize();
+//    pinMode(13, INPUT);
 
     auto *statusEndpoint = new Endpoint("/status", HTTP_GET, StatusHandler::handle);
     Logger.print(__FILE__, __LINE__, "Status endpoint created! Go to http://", WiFi.localIP().toString().c_str(),
@@ -72,4 +96,10 @@ void loop() {
         Logger.print(__FILE__, __LINE__, "WiFi disconnected");
         return;
     }
+
+    WiFiConfig::disconnect();
+    delay(1000);
+    BatteryConfig::checkBatteryLevel();
+    WiFiConfig::reconnect();
+    delay(1000);
 }

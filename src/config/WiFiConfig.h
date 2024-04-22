@@ -7,6 +7,10 @@
 class WiFiConfig {
 public:
     static bool connect();
+
+    static void disconnect();
+
+    static void reconnect();
 };
 
 #endif //WIFICONFIG_H
