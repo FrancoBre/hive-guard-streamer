@@ -10,6 +10,7 @@
 #include "handler/LogsHandler.h"
 #include "handler/TemperatureHumiditySensorHandler.h"
 #include "utils/CustomSerial.h"
+#include "config/BatteryConfig.h"
 
 void setup() {
     delay(5000);
@@ -25,6 +26,9 @@ void setup() {
         Logger.print(__FILE__, __LINE__, "Camera setup successful");
     }
 
+    pinMode(13, INPUT);
+    Logger.print(__FILE__, __LINE__, "GPIO 13 set as input");
+
     if (!WiFiConfig::connect()) {
         Logger.print(__FILE__, __LINE__, "WiFi connection failed");
         return;
@@ -33,6 +37,8 @@ void setup() {
     }
 
     TimeConfig::initialize();
+
+    BatteryConfig::initialize();
 
     auto *statusEndpoint = new Endpoint("/status", HTTP_GET, StatusHandler::handle);
     Logger.print(__FILE__, __LINE__, "Status endpoint created! Go to http://", WiFi.localIP().toString().c_str(),
@@ -62,14 +68,18 @@ void setup() {
     } else {
         Logger.print(__FILE__, __LINE__, "HTTP server started");
     }
-
 }
 
 void loop() {
-    delay(10000);
+    delay(100000);
 
     if (WiFiClass::status() != WL_CONNECTED) {
         Logger.print(__FILE__, __LINE__, "WiFi disconnected");
         return;
     }
+
+    // Battery check doesn't work when WiFi is connected
+    WiFiConfig::disconnect();
+    BatteryConfig::checkBatteryLevel();
+    WiFiConfig::reconnect();
 }
