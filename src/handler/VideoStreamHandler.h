@@ -2,6 +2,7 @@
 #define VIDEOSTREAMHANDLER_H
 
 #include "esp_http_server.h"
+#include "utils/CustomSerial.h"
 
 class VideoStreamHandler {
 public:
