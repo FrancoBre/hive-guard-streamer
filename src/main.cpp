@@ -71,15 +71,59 @@ void setup() {
 }
 
 void loop() {
-    delay(100000);
+  webSocket.loop();
+  uint64_t now = millis();
 
-    if (WiFiClass::status() != WL_CONNECTED) {
-        Logger.print(__FILE__, __LINE__, "WiFi disconnected");
-        return;
+  if(now - messageTimestamp > 30) {
+    messageTimestamp = now;
+
+    camera_fb_t * fb = NULL;
+
+    // Take Picture with Camera
+    fb = esp_camera_fb_get();
+    if(!fb) {
+      Serial.println("Camera capture failed");
+      return;
     }
 
-    // Battery check doesn't work when WiFi is connected
-    WiFiConfig::disconnect();
-    BatteryConfig::checkBatteryLevel();
-    WiFiConfig::reconnect();
+    webSocket.sendBIN(fb->buf,fb->len);
+    Serial.println("Image sent");
+    esp_camera_fb_return(fb);
+
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+
+    if(isnan(h)) {
+      h = hmem;
+    } else {
+      hmem = h;
+    }
+
+    if(isnan(t)) {
+      t = tmem;
+    } else {
+      tmem = t;
+    }
+
+    String output = "temp=" + String(t, 2) + ",hum=" + String(h, 2) + ",light=12;state:ON_BOARD_LED_1=" + String(flashlight);
+    Serial.println(output);
+
+    client.send(output);
+  }
 }
+
+/*
+void loop() {
+delay(100000);
+
+if (WiFiClass::status() != WL_CONNECTED) {
+    Logger.print(__FILE__, __LINE__, "WiFi disconnected");
+    return;
+}
+
+// Battery check doesn't work when WiFi is connected
+WiFiConfig::disconnect();
+BatteryConfig::checkBatteryLevel();
+WiFiConfig::reconnect();
+}
+ */
