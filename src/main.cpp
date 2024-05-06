@@ -11,6 +11,11 @@
 #include "handler/TemperatureHumiditySensorHandler.h"
 #include "utils/CustomSerial.h"
 #include "config/BatteryConfig.h"
+#include <ESP32Ping.h>
+
+void initializeHttpServer();
+
+String getMasterIp();
 
 void setup() {
     delay(5000);
@@ -40,6 +45,27 @@ void setup() {
 
     BatteryConfig::initialize();
 
+    initializeHttpServer();
+
+    String masterIp = getMasterIp();
+    // TODO configure websocket connection to master server with masterIp
+}
+
+void loop() {
+    delay(100000);
+
+    if (WiFiClass::status() != WL_CONNECTED) {
+        Logger.print(__FILE__, __LINE__, "WiFi disconnected");
+        return;
+    }
+
+    // Battery check doesn't work when WiFi is connected
+    WiFiConfig::disconnect();
+    BatteryConfig::checkBatteryLevel();
+    WiFiConfig::reconnect();
+}
+
+void initializeHttpServer() {
     auto *statusEndpoint = new Endpoint("/status", HTTP_GET, StatusHandler::handle);
     Logger.print(__FILE__, __LINE__, "Status endpoint created! Go to http://", WiFi.localIP().toString().c_str(),
                  "/status\n");
@@ -59,7 +85,7 @@ void setup() {
     HttpServerConfig httpServerConfig;
     httpServerConfig.addEndpoint(statusEndpoint);
     httpServerConfig.addEndpoint(videoStreamEndpoint);
-    httpServerConfig.addEndpoint(logsEndpoint); 
+    httpServerConfig.addEndpoint(logsEndpoint);
     httpServerConfig.addEndpoint(dhtEndpoint);
 
     if (!httpServerConfig.start()) {
@@ -70,16 +96,28 @@ void setup() {
     }
 }
 
-void loop() {
-    delay(100000);
-
-    if (WiFiClass::status() != WL_CONNECTED) {
-        Logger.print(__FILE__, __LINE__, "WiFi disconnected");
-        return;
+String getMasterIp() {
+    WiFiClient client;
+    for (int i = 1; i <= 254; i++) {
+        String ip = "192.168.0." + String(i);
+        if (Ping.ping(ip.c_str())) {
+            if (client.connect(ip.c_str(), 80)) {
+                client.println("GET /isMaster HTTP/1.1");
+                client.println("Host: " + ip);
+                client.println("Connection: close");
+                client.println();
+                while (client.connected()) {
+                    if (client.available()) {
+                        String line = client.readStringUntil('\r');
+                        if (line.startsWith("Master: Yes")) {
+                            Logger.print(__FILE__, __LINE__, "Master server found at IP: ", ip);
+                            return ip;
+                        }
+                    }
+                }
+            }
+        }
     }
-
-    // Battery check doesn't work when WiFi is connected
-    WiFiConfig::disconnect();
-    BatteryConfig::checkBatteryLevel();
-    WiFiConfig::reconnect();
+    Logger.print(__FILE__, __LINE__, "Master server not found");
+    return {};
 }
