@@ -11,12 +11,12 @@ public:
 
     static void begin();
 
-private:
-    static std::string getWebPage();
-
     static float readDHTTemperature();
 
     static float readDHTHumidity();
+
+private:
+    static std::string getWebPage();
 };
 
 #endif // TEMPERATUREHUMIDITYSENSORHANDLER_H

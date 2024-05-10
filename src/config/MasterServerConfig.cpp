@@ -13,8 +13,10 @@ String MasterServerConfig::getMasterIp() {
 
     WiFiClient client;
     char ip[16];
-    for (int thirdOctet = 0; thirdOctet <= 1; thirdOctet++) {
-        for (int fourthOctet = 1; fourthOctet <= 254; fourthOctet++) {
+//    for (int thirdOctet = 0; thirdOctet <= 1; thirdOctet++) {
+//        for (int fourthOctet = 1; fourthOctet <= 254; fourthOctet++) {
+    for (int thirdOctet = 1; thirdOctet <= 1; thirdOctet++) {
+        for (int fourthOctet = 50; fourthOctet <= 70; fourthOctet++) {
             snprintf(ip, sizeof(ip), "192.168.%d.%d", thirdOctet, fourthOctet);
 
             Logger.print(__FILE__, __LINE__, "Checking if master server is IP: ", ip);

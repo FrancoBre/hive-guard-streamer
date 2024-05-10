@@ -13,6 +13,7 @@
 #include "config/BatteryConfig.h"
 #include "config/MasterServerConfig.h"
 #include "ESPAsyncWebServer.h"
+#include "config/WebSocketConfig.h"
 
 void initializeHttpServer();
 
@@ -50,20 +51,50 @@ void setup() {
 
     String masterIp = MasterServerConfig::getMasterIp();
     // TODO configure websocket connection to master server with masterIp
+
+    if (masterIp.isEmpty()) {
+        Logger.print(__FILE__, __LINE__, "Master server IP not found");
+        ESP.restart();
+    }
+    WebSocketConfig::initialize(masterIp);
 }
 
-void loop() {
-    delay(100000);
+unsigned long lastBatteryCheck = 0;
 
+void loop() {
     if (WiFiClass::status() != WL_CONNECTED) {
         Logger.print(__FILE__, __LINE__, "WiFi disconnected");
         return;
     }
 
     // Battery check doesn't work when WiFi is connected
-    WiFiConfig::disconnect();
-    BatteryConfig::checkBatteryLevel();
-    WiFiConfig::reconnect();
+//    if (millis() - lastBatteryCheck >= 600000) {
+//        WiFiConfig::disconnect();
+//        BatteryConfig::checkBatteryLevel();
+//        WiFiConfig::reconnect();
+//        lastBatteryCheck = millis()
+//    }
+
+    client.poll();
+
+    camera_fb_t *fb = esp_camera_fb_get();
+    if (!fb) {
+        esp_camera_fb_return(fb);
+        return;
+    }
+
+    if (fb-> format != PIXFORMAT_JPEG) { return; }
+
+    client.sendBinary((const char*) fb-> buf, fb-> len);
+    esp_camera_fb_return(fb);
+
+    float h = TemperatureHumiditySensorHandler::readDHTHumidity();
+    float t = TemperatureHumiditySensorHandler::readDHTTemperature();
+
+    String output = "temp=" + String(t, 2) + ",hum=" + String(h, 2) + ",light=12;state:ON_BOARD_LED_1=" + String(flashlight);
+    Logger.print(__FILE__, __LINE__, output);
+
+    client.send(output);
 }
 
 void initializeHttpServer() {
