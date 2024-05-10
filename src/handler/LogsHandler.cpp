@@ -1,9 +1,10 @@
+#include <WString.h>
 #include "LogsHandler.h"
 
 std::vector<std::string> LogsHandler::logs;
 
 esp_err_t LogsHandler::handle(httpd_req_t *req) {
-    std::string allLogs = getLogs();
+    String allLogs = getLogs();
     httpd_resp_set_type(req, "text/html");
     httpd_resp_send(req, allLogs.c_str(), allLogs.length());
     return ESP_OK;
@@ -17,10 +18,10 @@ void LogsHandler::addLog(const std::string &log) {
     logs.push_back(log);
 }
 
-std::string LogsHandler::getLogs() {
-    std::string allLogs;
+String LogsHandler::getLogs() {
+    String allLogs;
     for (const auto &log: logs) {
-        allLogs += log + "<br>";
+        allLogs += String(log.c_str()) + "<br>";
     }
     return allLogs;
 }

@@ -1,7 +1,7 @@
 #include "VideoStreamHandler.h"
 #include "esp_camera.h"
-#include "config/WiFiConfig.h"
 #include <Arduino.h>
+#include "service/VideoStreamService.h"
 
 #define PART_BOUNDARY "123456789000000000000987654321"
 static const char *STREAM_CONTENT_TYPE = "multipart/x-mixed-replace;boundary=" PART_BOUNDARY;
@@ -35,7 +35,8 @@ enable_led(true);
 #endif
 
     while (true) {
-        fb = esp_camera_fb_get();
+        fb = VideoStreamService::captureFrame();
+
         if (!fb) {
             log_e("Camera capture failed");
             res = ESP_FAIL;
@@ -43,17 +44,10 @@ enable_led(true);
             _timestamp.tv_sec = fb->timestamp.tv_sec;
             _timestamp.tv_usec = fb->timestamp.tv_usec;
 
-            if (fb->format != PIXFORMAT_JPEG) {
-                bool jpeg_converted = frame2jpg(fb, 80, &_jpg_buf, &_jpg_buf_len);
-                esp_camera_fb_return(fb);
-                fb = nullptr;
-                if (!jpeg_converted) {
-                    log_e("JPEG compression failed");
-                    res = ESP_FAIL;
-                }
-            } else {
-                _jpg_buf_len = fb->len;
-                _jpg_buf = fb->buf;
+            _jpg_buf = VideoStreamService::processFrame(&_jpg_buf_len); // Use el servicio para procesar el cuadro
+            if (!_jpg_buf) {
+                log_e("JPEG compression failed");
+                res = ESP_FAIL;
             }
         }
         if (res == ESP_OK) {
@@ -68,7 +62,7 @@ enable_led(true);
             res = httpd_resp_send_chunk(req, (const char *) _jpg_buf, _jpg_buf_len);
         }
         if (fb) {
-            esp_camera_fb_return(fb);
+            VideoStreamService::releaseFrame();
             fb = nullptr;
             _jpg_buf = nullptr;
         } else if (_jpg_buf) {
