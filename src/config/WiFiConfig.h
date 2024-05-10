@@ -10,9 +10,9 @@ class WiFiConfig {
 public:
     static bool connect();
 
-    static void disconnect();
-
-    static void reconnect();
+//    static void disconnect();
+//
+//    static void reconnect();
 
 private:
     static Preferences preferences;
