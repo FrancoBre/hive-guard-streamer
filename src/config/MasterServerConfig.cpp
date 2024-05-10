@@ -2,11 +2,11 @@
 
 Preferences preferences;
 
-String MasterServerConfig::masterIp = preferences.getString("masterIp", "");
+String MasterServerConfig::masterServerIp = preferences.getString("masterIp", "");
 
 String MasterServerConfig::getMasterIp() {
-    if (!masterIp.isEmpty()) {
-        return masterIp;
+    if (!masterServerIp.isEmpty()) {
+        return masterServerIp;
     }
 
     Logger.print(__FILE__, __LINE__, "Searching for master server");
@@ -18,18 +18,20 @@ String MasterServerConfig::getMasterIp() {
             snprintf(ip, sizeof(ip), "192.168.%d.%d", thirdOctet, fourthOctet);
 
             Logger.print(__FILE__, __LINE__, "Checking if master server is IP: ", ip);
-            if (isIpMaster(client, ip)) {
-                Logger.print(__FILE__, __LINE__, "Master server found at IP: ", ip);
-                masterIp = ip;
-                preferences.putString("masterIp", masterIp);
-                return masterIp;
+            askIpIfItsMaster(client, ip);
+
+            if (!MasterServerConfig::masterServerIp.isEmpty()) {
+                Logger.print(__FILE__, __LINE__, "Master server found at IP: ",
+                             MasterServerConfig::masterServerIp.c_str());
+                preferences.putString("masterIp", masterServerIp);
+                return masterServerIp;
             }
         }
     }
     return {};
 }
 
-bool MasterServerConfig::isIpMaster(WiFiClient &client, const String &ip) {
+bool MasterServerConfig::askIpIfItsMaster(WiFiClient &client, const String &ip) {
     if (client.connect(ip.c_str(), 8000)) {
         client.println("GET /isMaster HTTP/1.1");
         client.println("Host: " + ip);
@@ -40,11 +42,8 @@ bool MasterServerConfig::isIpMaster(WiFiClient &client, const String &ip) {
             if (client.available()) {
                 String line = client.readString();
                 Logger.print(__FILE__, __LINE__, line);
-                if (line.startsWith("1")) {
-                    return true;
-                }
             }
-            client.stop(); // Close the connection
+            client.stop();
         }
     }
     return false;

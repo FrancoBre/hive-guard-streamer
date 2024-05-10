@@ -12,8 +12,11 @@
 #include "utils/CustomSerial.h"
 #include "config/BatteryConfig.h"
 #include "config/MasterServerConfig.h"
+#include "ESPAsyncWebServer.h"
 
 void initializeHttpServer();
+
+AsyncWebServer server(80);
 
 void setup() {
     delay(5000);
@@ -64,32 +67,41 @@ void loop() {
 }
 
 void initializeHttpServer() {
-    auto *statusEndpoint = new Endpoint("/status", HTTP_GET, StatusHandler::handle);
+    server.on(
+            "/iAmMaster",
+            HTTP_POST,
+            [](AsyncWebServerRequest *request) {},
+            NULL,
+            [](AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+
+                for (size_t i = 0; i < len; i++) {
+                    Serial.write(data[i]);
+                }
+
+                Serial.println();
+                MasterServerConfig::masterServerIp = request->client()->remoteIP().toString();
+                Logger.print(__FILE__, __LINE__, "Master server IP saved successfully");
+                Logger.print(__FILE__, __LINE__, "Ready for websocket connection");
+
+                request->send(200);
+            });
+    Logger.print(__FILE__, __LINE__, "Am I master? endpoint created! Go to http://", WiFi.localIP().toString().c_str(),
+                 "/iAmMaster\n");
+
+    server.on("/status", HTTP_GET, [](AsyncWebServerRequest *request) {
+        request->send(200, "text/plain", "Server is running");
+    });
     Logger.print(__FILE__, __LINE__, "Status endpoint created! Go to http://", WiFi.localIP().toString().c_str(),
                  "/status\n");
 
-    auto *videoStreamEndpoint = new Endpoint("/stream", HTTP_GET, VideoStreamHandler::handle);
-    Logger.print(__FILE__, __LINE__, "Video stream endpoint created! Go to http://", WiFi.localIP().toString().c_str(),
-                 "/stream\n");
-
-    auto *logsEndpoint = new Endpoint("/logs", HTTP_GET, LogsHandler::handle);
+    server.on("/logs", HTTP_GET, [](AsyncWebServerRequest *request) {
+        String allLogs = LogsHandler::getLogs();
+        request->send(200, "text/html", allLogs);
+    });
     Logger.print(__FILE__, __LINE__, "Logs endpoint created! Go to http://", WiFi.localIP().toString().c_str(),
                  "/logs\n");
 
-    auto *dhtEndpoint = new Endpoint("/sensor", HTTP_GET, TemperatureHumiditySensorHandler::handle);
-    Logger.print(__FILE__, __LINE__, "DHT endpoint created! Go to http://", WiFi.localIP().toString().c_str(),
-                 "/sensor\n");
+    server.begin();
 
-    HttpServerConfig httpServerConfig;
-    httpServerConfig.addEndpoint(statusEndpoint);
-    httpServerConfig.addEndpoint(videoStreamEndpoint);
-    httpServerConfig.addEndpoint(logsEndpoint);
-    httpServerConfig.addEndpoint(dhtEndpoint);
-
-    if (!httpServerConfig.start()) {
-        Logger.print(__FILE__, __LINE__, "HTTP server failed to start");
-        return;
-    } else {
-        Logger.print(__FILE__, __LINE__, "HTTP server started");
-    }
+    Logger.print(__FILE__, __LINE__, "HTTP server started successfully!");
 }
