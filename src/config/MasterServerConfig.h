@@ -8,11 +8,11 @@
 
 class MasterServerConfig {
 public:
-    static String getMasterIp();
+    static String getMasterIp(String jsonData);
     static String masterServerIp;
 
 private:
-    static bool askIpIfItsMaster(WiFiClient &client, const String &ip);
+    static bool askIpIfItsMaster(WiFiClient &client, const String &ip, const String &jsonData);
 };
 
 
