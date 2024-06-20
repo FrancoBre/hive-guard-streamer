@@ -16,7 +16,7 @@ extern int flashlight;
 
 class WebSocketConfig {
 public:
-    static void initialize(String masterServerIp);
+    static void initialize(String masterServerIp, int i);
 
 private:
     static void onEventsCallback(WebsocketsEvent event, String data);

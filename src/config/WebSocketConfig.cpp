@@ -3,9 +3,13 @@
 WebsocketsClient client;
 int flashlight = 0;
 
-void WebSocketConfig::initialize(String masterServerIp) {
-    String websocket_server = "ws://" + masterServerIp + ":8885/";
+void WebSocketConfig::initialize(String masterServerIp, int wsPort) {
+    Logger.print(__FILE__, __LINE__, "Initializing WebSocket with masterServerIp: ", masterServerIp.c_str(), " and wsPort: ", wsPort);
+
+    String websocket_server = "ws://" + masterServerIp + ":" + wsPort + "/";
     const char* websocket_server_cstr = websocket_server.c_str();
+
+    Logger.print(__FILE__, __LINE__, "Constructed WebSocket server string: ", websocket_server_cstr);
 
     client.onMessage(onMessageCallback);
     client.onEvent(onEventsCallback);
