@@ -1,99 +1,74 @@
 #include "MasterServerConfig.h"
+#include <WiFi.h>
+#include <WiFiUdp.h>
+
+const unsigned int udpPort = 12345; // Port for UDP communication
+WiFiUDP udp;
+
+String udpBroadcastDiscovery(const String &jsonData);
 
 Preferences preferences;
 
 String MasterServerConfig::masterServerIp = preferences.getString("masterIp", "");
 
-bool testConnection(WiFiClient &client) {
-    const char *serverIp = "httpbin.org";
-    Logger.print(__FILE__, __LINE__, "TEST_CONNECTION - Attempting to connect to: ", serverIp);
-    if (client.connect(serverIp, 80)) {
-        Logger.print(__FILE__, __LINE__, "TEST_CONNECTION - Connected to server");
-        client.println("GET /get HTTP/1.1");
-        client.println("Host: " + String(serverIp));
-        client.println("Connection: close");
-        client.println(); // HTTP requests end with a blank line
-
-        while (client.connected()) {
-            if (client.available()) {
-                String line = client.readString();
-                Logger.print(__FILE__, __LINE__, "TEST_CONNECTION - Received from server: ", line.c_str());
-            }
-        }
-        client.stop();
-        Logger.print(__FILE__, __LINE__, "TEST_CONNECTION - Connection closed");
-        return true;
-    }
-    Logger.print(__FILE__, __LINE__, "TEST_CONNECTION - Failed to connect to server");
-    return false;
-}
-
 String MasterServerConfig::getMasterIp(String jsonData) {
-    WiFiClient client;
-    // Add a mock request to a known IP to test the connection
-    Logger.print(__FILE__, __LINE__, "TEST_CONNECTION - Testing connection");
-    bool connectionTestResult = testConnection(client);
-    Logger.print(__FILE__, __LINE__, "TEST_CONNECTION - Connection test result: ",
-                 connectionTestResult ? "Success" : "Failure");
+    Logger.print(__FILE__, __LINE__, "Starting getMasterIp with JSON data: ", jsonData.c_str());
 
-    if (!masterServerIp.isEmpty()) {
-        Logger.print(__FILE__, __LINE__, "Master server IP is not empty: ", masterServerIp.c_str());
-        return masterServerIp;
+    udp.begin(udpPort);
+    Logger.print(__FILE__, __LINE__, "UDP initialized with port: ", String(udpPort).c_str());
+
+    String masterIp = udpBroadcastDiscovery(jsonData);
+    if (!masterIp.isEmpty()) {
+        Logger.print(__FILE__, __LINE__, "Master server IP found: ", masterIp.c_str());
+        return masterIp;
+    } else {
+        Logger.print(__FILE__, __LINE__, "Master server IP not found after UDP broadcast");
     }
-
-    Logger.print(__FILE__, __LINE__, "Searching for master server");
-    Logger.print(__FILE__, __LINE__, "Payload: ", jsonData.c_str());
-
-    char ip[16] = "192.168.1.56";
-//    for (int thirdOctet = 0; thirdOctet <= 1; thirdOctet++) {
-//        for (int fourthOctet = 1; fourthOctet <= 254; fourthOctet++) {
-//    for (int thirdOctet = 1; thirdOctet <= 1; thirdOctet++) {
-//        for (int fourthOctet = 50; fourthOctet <= 70; fourthOctet++) {
-//            snprintf(ip, sizeof(ip), "192.168.%d.%d", thirdOctet, fourthOctet);
-    snprintf(ip, sizeof(ip), "192.168.1.56");
-
-    Logger.print(__FILE__, __LINE__, "Checking if master server is IP: ", ip);
-    askIpIfItsMaster(client, ip, jsonData);
-
-    if (!MasterServerConfig::masterServerIp.isEmpty()) {
-        Logger.print(__FILE__, __LINE__, "Master server found at IP: ",
-                     MasterServerConfig::masterServerIp.c_str());
-        preferences.putString("masterIp", masterServerIp);
-        return masterServerIp;
-    }
-//        }
-//    }
     return {};
 }
 
-bool MasterServerConfig::askIpIfItsMaster(WiFiClient &client, const String &ip, const String &jsonData) {
-    Logger.print(__FILE__, __LINE__, "ASK_IP_IF_ITS_MASTER - Attempting to connect to: ", ip.c_str());
-    if (client.connect(ip.c_str(), 8000)) {
-        Logger.print(__FILE__, __LINE__, "ASK_IP_IF_ITS_MASTER - Connected to IP");
-        client.println("POST /isMaster HTTP/1.1");
-        client.println("Host: " + ip);
-        client.println("Content-Type: application/json");
-        client.println("Content-Length: " + String(jsonData.length()));
-        client.println(); // HTTP requests end with a blank line
-        client.println(jsonData);
-        Logger.print(__FILE__, __LINE__, "ASK_IP_IF_ITS_MASTER - Sent JSON data: ", jsonData.c_str());
+String udpBroadcastDiscovery(const String &jsonData) {
+    Logger.print(__FILE__, __LINE__, "Starting udpBroadcastDiscovery with JSON data: ", jsonData.c_str());
 
-        while (client.connected()) {
-            if (client.available()) {
-                String line = client.readString();
-                Logger.print(__FILE__, __LINE__, "ASK_IP_IF_ITS_MASTER - Received from IP: ", line.c_str());
-                if (line.indexOf("Master: Yes") != -1) {
-                    MasterServerConfig::masterServerIp = ip;
-                    Logger.print(__FILE__, __LINE__, "Master server found at IP: ", ip.c_str());
-                    preferences.putString("masterIp", masterServerIp);
-                    return true;
-                }
+    IPAddress broadcastIp = ~WiFi.subnetMask() | WiFi.gatewayIP();
+    Logger.print(__FILE__, __LINE__, "Calculated broadcast IP: ", broadcastIp.toString().c_str());
+
+    udp.beginPacket(broadcastIp, udpPort);
+    udp.write(reinterpret_cast<const uint8_t *>(jsonData.c_str()), jsonData.length());
+    udp.endPacket();
+    Logger.print(__FILE__, __LINE__, "Broadcast packet sent");
+
+    uint32_t start = millis();
+    const char spinner[] = "|/-";
+    int spinnerIndex = 0;
+    while (millis() - start < 25000) { // Wait for 25 seconds to get a response
+        Logger.print(__FILE__, __LINE__, "Waiting for response... ", spinner[spinnerIndex]);
+        spinnerIndex = (spinnerIndex + 1) % sizeof(spinner);
+
+        int packetSize = udp.parsePacket();
+        if (packetSize) {
+            Logger.print(__FILE__, __LINE__, "Packet received with size: ", String(packetSize).c_str());
+
+            char incomingPacket[255];
+            int len = udp.read(incomingPacket, 255);
+            if (len > 0) {
+                incomingPacket[len] = 0;
             }
+
+            String response = String(incomingPacket);
+            Logger.print(__FILE__, __LINE__, "Received response from master server: ", response.c_str());
+
+            // Get the IP address of the server that sent the packet
+            IPAddress serverIp = udp.remoteIP();
+            String masterIp = serverIp.toString();
+            preferences.putString("masterIp", masterIp);
+            Logger.print(__FILE__, __LINE__, "Master server IP saved successfully: ", masterIp.c_str());
+            return masterIp;
+        } else {
+            delay(500); // Delay for half a second before checking for the next packet
         }
-        client.stop();
-        Logger.print(__FILE__, __LINE__, "ASK_IP_IF_ITS_MASTER - Connection to IP closed");
-    } else {
-        Logger.print(__FILE__, __LINE__, "ASK_IP_IF_ITS_MASTER - Failed to connect to IP");
     }
-    return false;
+    Logger.print(__FILE__, __LINE__, "Timeout reached, no response received");
+    return "";
+    return "";
 }
