@@ -31,7 +31,7 @@ float TemperatureHumiditySensorHandler::readDHTTemperature() {
 float TemperatureHumiditySensorHandler::readDHTHumidity() {
     float h = dht.readHumidity();
     if (isnan(h)) {
-        Logger.print(__FILE__, __LINE__, "Failed to read from DHT sensor!");
+//        Logger.print(__FILE__, __LINE__, "Failed to read from DHT sensor!");
         return -1;
     } else {
         Logger.print(__FILE__, __LINE__, "Humidity: ", h);

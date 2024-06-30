@@ -5,7 +5,7 @@ class BatteryConfig {
 
 public:
     static void initialize();
-    static void checkBatteryLevel();
+    static unsigned char checkBatteryLevel();
 };
 
 #endif //BATTERYCONFIG_H

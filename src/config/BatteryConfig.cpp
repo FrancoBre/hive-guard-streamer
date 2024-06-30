@@ -8,7 +8,9 @@ void BatteryConfig::initialize() {
     pinMode(VBAT_PIN, INPUT);
 }
 
-void BatteryConfig::checkBatteryLevel() {
+unsigned char BatteryConfig::checkBatteryLevel() {
+    Logger.print(__FILE__, __LINE__, "about to read mf battery level");
+
     // Read the raw value from the battery pin
     int rawValue = analogRead(VBAT_PIN);
 
@@ -18,7 +20,7 @@ void BatteryConfig::checkBatteryLevel() {
     // Check if the raw value is 0
     if (rawValue == 0) {
         Logger.print(__FILE__, __LINE__, "Error: No reading from battery level pin");
-        return;
+        return 0;
     }
 
     // Convert the raw value to voltage
@@ -32,9 +34,10 @@ void BatteryConfig::checkBatteryLevel() {
     char batteryLevelStr[50];
     sprintf(batteryLevelStr, "Battery level: %d%%", batteryPercentage);
     Logger.print(__FILE__, __LINE__, batteryLevelStr);
+    return batteryPercentage;
 
-    // Check if the battery voltage is low
-    if (batteryVoltage < BATTV_LOW) {
-        Logger.print(__FILE__, __LINE__, "Low battery!");
-    }
+//    // Check if the battery voltage is low
+//    if (batteryVoltage < BATTV_LOW) {
+//        Logger.print(__FILE__, __LINE__, "Low battery!");
+//    }
 }

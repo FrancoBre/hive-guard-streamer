@@ -21,6 +21,9 @@ String getStreamerData_ToSendToMasterServer(int wsPort, int appPort);
 
 std::pair<int, int> findAvailablePorts();
 
+unsigned int batterySendingEnabled;
+unsigned int batteryPercentage;
+
 AsyncWebServer *server;
 
 void setup() {
@@ -38,7 +41,16 @@ void setup() {
     }
 
     pinMode(13, INPUT);
-    Logger.print(__FILE__, __LINE__, "GPIO 13 set as input");
+    Logger.print(__FILE__, __LINE__, "GPIO 13 set for battery check");
+    batteryPercentage = BatteryConfig::checkBatteryLevel();
+
+    if (batteryPercentage == 0) {
+        batterySendingEnabled = 0;
+        Logger.print(__FILE__, __LINE__, "Battery sending not enabled");
+    } else {
+        batterySendingEnabled = 1;
+        Logger.print(__FILE__, __LINE__, "Battery sending enabled");
+    }
 
     if (!WiFiConfig::connect()) {
         Logger.print(__FILE__, __LINE__, "WiFi connection failed");
@@ -71,20 +83,26 @@ void setup() {
 String getStreamerData_ToSendToMasterServer(int wsPort, int appPort) {
     int randomId = random(1000, 9999);
     String ip = WiFi.localIP().toString();
+    bool batterySendingEnabledBool;
+    if (batterySendingEnabled == 1) {
+        batterySendingEnabledBool = true;
+    } else {
+        batterySendingEnabledBool = false;
+    }
 
-    return "{"
-           "\"id\": \"esp32cam" + String(randomId) + "\","
-                                                     "\"wsPort\": \"" + String(wsPort) + "\","
-                                                                                         "\"appPort\": \"" +
-           String(appPort) + "\","
-                             "\"saveSensorData\": true,"
-                             "\"detectObjects\": true,"
-                             "\"class\": \"cam-instance\","
-                             "\"display\": \"Cam #" + String(randomId) + "\","
-                                                                         "\"ip\": \"" + ip + "\","
-                                                                                             "\"commands\": [{"
-                                                                                             "\"id\": \"ON_BOARD_LED\", \"name\": \"Camera flashlight\", \"class\": \"led-light\", \"state\": 0"
-                                                                                             "}]""}";
+return "{"
+       "\"id\": \"esp32cam" + String(randomId) + "\","
+       "\"wsPort\": \"" + String(wsPort) + "\","
+       "\"appPort\": \"" + String(appPort) + "\","
+       "\"saveSensorData\": true,"
+       "\"detectObjects\": true,"  // Add a comma here
+       "\"batteryEnabled\": \"" + String(batterySendingEnabled) + "\","
+       "\"class\": \"cam-instance\","
+       "\"display\": \"Hive #" + String(randomId) + "\","
+       "\"ip\": \"" + ip + "\","
+       "\"commands\": [{"
+       "\"id\": \"ON_BOARD_LED\", \"name\": \"Camera flashlight\", \"class\": \"led-light\", \"state\": 0"
+       "}]}";
 }
 
 unsigned long lastBatteryCheck = 0;
@@ -96,12 +114,16 @@ void loop() {
     }
 
     // Battery check doesn't work when WiFi is connected
-//    if (millis() - lastBatteryCheck >= 600000) {
-//        WiFiConfig::disconnect();
-//        BatteryConfig::checkBatteryLevel();
-//        WiFiConfig::reconnect();
-//        lastBatteryCheck = millis()
-//    }
+    // nor when it is disconnected and reconnected, so we need to reboot the device
+    if (batterySendingEnabled) {
+        if (millis() - lastBatteryCheck >= 600000) {
+//            WiFiConfig::disconnect();
+//            BatteryConfig::checkBatteryLevel();
+//            WiFiConfig::reconnect();
+//            lastBatteryCheck = millis();
+            ESP.restart();
+        }
+    }
 
     client.poll();
 
@@ -119,9 +141,10 @@ void loop() {
     float h = TemperatureHumiditySensorHandler::readDHTHumidity();
     float t = TemperatureHumiditySensorHandler::readDHTTemperature();
 
-
     String output =
-            "temp=" + String(t, 2) + ",hum=" + String(h, 2) + ",light=12;state:ON_BOARD_LED_1=" + String(flashlight);
+            "temp=" + String(t, 2) + ",hum=" + String(h, 2) +
+            ",batteryEnabled=" + String(batterySendingEnabled) +
+            ";battery=" + String(batteryPercentage);
 
     client.send(output);
 }

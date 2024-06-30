@@ -70,5 +70,4 @@ String udpBroadcastDiscovery(const String &jsonData) {
     }
     Logger.print(__FILE__, __LINE__, "Timeout reached, no response received");
     return "";
-    return "";
 }
