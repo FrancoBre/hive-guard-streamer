@@ -71,22 +71,23 @@ The application is built with PlatformIO and the Arduino framework for the ESP32
 
 You may encounter issues when trying to view the application logs in the Serial Monitor. As a workaround, you can use the screen command in the terminal to connect to the ESP32's serial port. For example:
 
-bash
+```bash
 screen /dev/tty.usbserial-1210 115200
+```
 
-
-Where /dev/tty.usbserial-1210 is the device name and 115200 is the baud rate.  
+Where `/dev/tty.usbserial-1210` is the device name and `115200` is the baud rate.  
 
 ### Identifying the Connected Device
-To identify which device the ESP32 is connected to, you can use the ls /dev/tty.* command in the terminal. This command will list all tty devices, including your ESP32 if it's connected. The ESP32 device name usually starts with /dev/tty.usbserial- followed by a series of numbers and letters.
+To identify which device the ESP32 is connected to, you can use the `ls /dev/tty.*` command in the terminal. This command will list all tty devices, including your ESP32 if it's connected. The ESP32 device name usually starts with `/dev/tty.usbserial-` followed by a series of numbers and letters.
 
-bash
+```bash
 ls /dev/tty.*
+```
 
 ## What is left to do
 
 ### Battery
-There is a branch with a logic for streaming battery over. You can find more insight [here](https://github.com/FrancoBre/HIVE-GUARD/tree/main#Battery).
+There is [a branch](https://github.com/FrancoBre/hive-guard-streamer/tree/feature/send-battery-again) with a logic for streaming battery over. You can find more insight [here](https://github.com/FrancoBre/HIVE-GUARD/tree/main#Battery).
 
 The idea is to power the device using lithium 3.7V batteries, like this ones:
 
